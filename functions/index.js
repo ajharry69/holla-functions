@@ -102,7 +102,9 @@ exports.updateConversationsAndSendChatNotification = functions.firestore
 
             if (contextUserId === senderId) {
                 // conversation will be used to populate a in conversations list
+                // Also the message receiver
                 const senderMate = await getMate(receiverId);
+                // Also the message sender
                 const receiverMate = await getMate(senderId);
                 const unreadCountDocRef = db.doc('chats/' + receiverId + '/unread-count/' + senderId);
                 // update sender's conversation(s) with the receiver
@@ -142,7 +144,7 @@ exports.updateConversationsAndSendChatNotification = functions.firestore
                     }).then(doc => {
                         if (doc.exists) {
                             const fcmToken = doc.data()['fcmToken']
-                            if (fcmToken) return sendNotification(senderId, fcmToken, newMessage);
+                            if (fcmToken) return sendNotification(fcmToken, receiverMate, newMessage);
                         }
                         return null;
                     }).catch(err => {
@@ -182,27 +184,28 @@ function sendDeleteOrUpdateNotification(receiverTokens, id, objectType = ObjectT
             operation: operation
         }
     }).then(response => {
-        return console.log(`${objectType} ${operation} message sent: `, response);
+        return console.log(`${objectType} ${operation} notification response: `, response);
     }).catch(err => {
         console.log(`Failed to send ${objectType.toLowerCase()} ${operation} notification: `, err);
     });
 }
 
-function sendNotification(senderId, receiverTokens, messageData) {
+function sendNotification(receiverTokens, sender, message) {
+    // noinspection JSUnresolvedVariable
     return admin.messaging().sendToDevice(receiverTokens, {
         data: {
-            title: senderId.toString(), // what will be used to fetch the senders name from your contact list
-            body: messageData.body.toString(),
-            payload: JSON.stringify({
-                senderId: senderId.toString(),
-                messageId: messageData.id.toString()
-            }) // Will be used to initiate a message fetch upon notification reception at the client side
+            title: sender.mobileNumber.toString(), // what will be used to fetch the senders name from your contact list
+            body: message.body.toString(),
+            imageUrl: sender.profilePictureUrl,
+            senderId: sender.id.toString(),
+            messageId: message.id.toString()
+            // Will be used to initiate a message fetch upon notification reception at the client side
         }
     }, {
         ttl: 30 * 24 * 60 * 60,
         priority: 'high'
     }).then(response => {
-        return console.log('FCM message sent: ', response);
+        return console.log('Notification Response: ', response);
     }).catch(err => {
         console.log('Failed to send notification: ', err);
     });
