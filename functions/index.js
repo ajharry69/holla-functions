@@ -10,7 +10,7 @@ exports.sendNotificationOnConversationUpdate = functions.firestore
         try {
             const fcmToken = (await db.doc(`users/${context.params.ownerId}`).get()).data().fcmToken;
             const mateId = context.params.mateId;
-            return sendConversationDeleteOrUpdateNotification(fcmToken, mateId);
+            return sendDeleteOrUpdateNotification(fcmToken, mateId);
         } catch (e) {
             console.log(`Conversation update notification error: ${e}`);
             return null;
@@ -35,7 +35,7 @@ exports.cleanMessagesOnConversationDeletion = functions.firestore
             .then(() => {
                 return db.doc(`chats/${ownerId}/unread-count/${mateId}`).delete();
             }).then(() => {
-                return sendConversationDeleteOrUpdateNotification(fcmToken, mateId, Operation.DELETE);
+                return sendDeleteOrUpdateNotification(fcmToken, mateId, ObjectType.CONVERSATION, Operation.DELETE);
             }).catch(err => {
                 console.log('Conversations messages clean up error: ', err);
                 return null;
@@ -174,16 +174,17 @@ function getMateConversation(message, mateId, mate) {
     return conversation;
 }
 
-function sendConversationDeleteOrUpdateNotification(receiverTokens, mateId, operation = Operation.UPDATE) {
+function sendDeleteOrUpdateNotification(receiverTokens, id, objectType = ObjectType.CONVERSATION, operation = Operation.UPDATE) {
     return admin.messaging().sendToDevice(receiverTokens, {
         data: {
-            mateId: mateId,
+            id: id,
+            objectType: objectType,
             operation: operation
         }
     }).then(response => {
-        return console.log(`Conversation ${operation} message sent: `, response);
+        return console.log(`${objectType} ${operation} message sent: `, response);
     }).catch(err => {
-        console.log(`Failed to send conversation ${operation} notification: `, err);
+        console.log(`Failed to send ${objectType.toLowerCase()} ${operation} notification: `, err);
     });
 }
 
@@ -205,6 +206,12 @@ function sendNotification(senderId, receiverTokens, messageData) {
     }).catch(err => {
         console.log('Failed to send notification: ', err);
     });
+}
+
+const ObjectType = {
+    CONVERSATION: 'CONVERSATION',
+    CONTACT: 'CONTACT',
+    MESSAGE: 'MESSAGE'
 }
 
 const Operation = {
