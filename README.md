@@ -1,0 +1,2 @@
+# holla-functions
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/6bf1700034c943e8862062fb46b66e5b)](https://app.codacy.com/manual/ajharry69/holla-functions?utm_source=github.com&utm_medium=referral&utm_content=ajharry69/holla-functions&utm_campaign=Badge_Grade_Dashboard)
